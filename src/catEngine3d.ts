@@ -312,7 +312,7 @@ function createFaceAvatarMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     uniforms: {
       uTex: { value: null as THREE.Texture | null },
-      uFeather: { value: 0.16 },
+      uFeather: { value: 0.3 },
     },
     transparent: true,
     depthTest: true,
