@@ -306,6 +306,9 @@ function makeBlushTexture(): THREE.CanvasTexture {
 // Face avatar overlay geometry (headMount local space)
 const FACE_AVATAR_CY = 0.035;
 const FACE_AVATAR_R = 0.34;
+// Whole-head mode: larger photo centered a bit higher (ears are hidden)
+const HEAD_AVATAR_CY = 0.09;
+const HEAD_AVATAR_R = 0.5;
 
 /** Unlit round photo patch with a soft feathered rim, conforming to the face surface. */
 function createFaceAvatarMaterial(): THREE.ShaderMaterial {
@@ -592,6 +595,7 @@ export class KuroCatEngine3D {
   private faceAvatar: THREE.Mesh | null = null;
   private faceAvatarSrc: string | null = null;
   private faceAvatarScale = 1;
+  private faceAvatarMode: 'face' | 'head' = 'face';
 
   // Shared materials updated on skin switch
   private readonly pawMat: THREE.ShaderMaterial;
@@ -1392,9 +1396,11 @@ export class KuroCatEngine3D {
     return R * Z_SCALE * Math.sqrt(Math.max(0, 1 - ux * ux));
   }
 
-  private rebuildFaceAvatar(scale: number): void {
-    const r = FACE_AVATAR_R * scale;
-    const geo = this.makeCurvedFacePatchGeo(0, FACE_AVATAR_CY, r, r, 0.034, 28);
+  private rebuildFaceAvatar(scale: number, mode: 'face' | 'head' = 'face'): void {
+    const head = mode === 'head';
+    const r = (head ? HEAD_AVATAR_R : FACE_AVATAR_R) * scale;
+    const cy = head ? HEAD_AVATAR_CY : FACE_AVATAR_CY;
+    const geo = this.makeCurvedFacePatchGeo(0, cy, r, r, 0.034, 32);
     if (this.faceAvatar) {
       this.faceAvatar.geometry.dispose();
       this.faceAvatar.geometry = geo;
@@ -1405,16 +1411,21 @@ export class KuroCatEngine3D {
       this.headMount.add(this.faceAvatar);
     }
     this.faceAvatarScale = scale;
+    this.faceAvatarMode = mode;
   }
 
   private applyFaceAvatar(skin: CatSkinConfig): void {
-    const { faceImage, faceImageScale } = resolveFaceImage(skin);
+    const { faceImage, faceImageScale, faceImageMode } = resolveFaceImage(skin);
     if (!this.faceAvatar) return;
+    const hideEars = Boolean(faceImage) && faceImageMode === 'head';
+    for (const e of this.ears) e.group.visible = !hideEars;
     if (!faceImage) {
       this.faceAvatar.visible = false;
       return;
     }
-    if (faceImageScale !== this.faceAvatarScale) this.rebuildFaceAvatar(faceImageScale);
+    if (faceImageScale !== this.faceAvatarScale || faceImageMode !== this.faceAvatarMode) {
+      this.rebuildFaceAvatar(faceImageScale, faceImageMode);
+    }
     if (faceImage !== this.faceAvatarSrc) {
       this.faceAvatarSrc = faceImage;
       new THREE.TextureLoader().load(faceImage, (tex) => {

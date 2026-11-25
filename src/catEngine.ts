@@ -597,9 +597,15 @@ export class KuroCatEngine {
   }
 
   /** Round soft-edged face avatar photo centered on the custom cat's face. */
-  private drawFaceAvatar(ctx: CanvasRenderingContext2D, img: HTMLImageElement, cx: number, scale: number): void {
-    const r = 31 * scale;
-    const cy = 4;
+  private drawFaceAvatar(
+    ctx: CanvasRenderingContext2D,
+    img: HTMLImageElement,
+    cx: number,
+    scale: number,
+    mode: 'face' | 'head',
+  ): void {
+    const r = (mode === 'head' ? 46 : 31) * scale;
+    const cy = mode === 'head' ? -4 : 4;
     ctx.save();
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
@@ -4780,8 +4786,10 @@ export class KuroCatEngine {
     };
 
     this.drawHeadphonesBack(ctx);
-    drawCustomEar(-1, lTwitch);
-    drawCustomEar(1, rTwitch);
+    if (!(s.faceImage && s.faceImageMode === 'head' && this.faceImg)) {
+      drawCustomEar(-1, lTwitch);
+      drawCustomEar(1, rTwitch);
+    }
 
     ctx.shadowBlur = 0;
     ctx.shadowOffsetY = 0;
@@ -4789,7 +4797,7 @@ export class KuroCatEngine {
 
     const faceImg = s.faceImage ? this.faceImg : null;
     if (faceImg) {
-      this.drawFaceAvatar(ctx, faceImg, wShift, s.faceImageScale);
+      this.drawFaceAvatar(ctx, faceImg, wShift, s.faceImageScale, s.faceImageMode);
     } else {
       // Blush on petting
       if (s.blushColor && this.squintAmount > 0.12) {

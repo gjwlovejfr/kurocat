@@ -50,6 +50,7 @@ export interface CatSkinConfig {
   eyeLid?: number;
   faceImage?: string;
   faceImageScale?: number;
+  faceImageMode?: 'face' | 'head';
   squintColor?: string;
   squintGlowColor?: string;
   noseColor?: string;
@@ -101,6 +102,7 @@ export interface ResolvedSkin {
   eyeLid: number;
   faceImage: string | null;
   faceImageScale: number;
+  faceImageMode: 'face' | 'head';
   squintColor: string;
   squintGlowColor: string | null;
   noseColor: string | null;
@@ -149,14 +151,16 @@ export function resolveEyeShape(raw: Pick<CatSkinConfig, 'eyeWidth' | 'eyeOpen' 
 }
 
 /** Face avatar overlay: only image data URLs are accepted (no remote URLs / file paths). */
-export function resolveFaceImage(raw: Pick<CatSkinConfig, 'faceImage' | 'faceImageScale'>): {
+export function resolveFaceImage(raw: Pick<CatSkinConfig, 'faceImage' | 'faceImageScale' | 'faceImageMode'>): {
   faceImage: string | null;
   faceImageScale: number;
+  faceImageMode: 'face' | 'head';
 } {
   const src = typeof raw.faceImage === 'string' ? raw.faceImage.trim() : '';
   return {
     faceImage: /^data:image\/(png|jpe?g|webp);base64,/i.test(src) ? src : null,
     faceImageScale: clampNum(raw.faceImageScale, 0.6, 1.4, 1),
+    faceImageMode: raw.faceImageMode === 'head' ? 'head' : 'face',
   };
 }
 
