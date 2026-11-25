@@ -72,6 +72,8 @@ fn tool_definitions() -> Value {
                             "eyeRimColor": { "type": "string" },
                             "eyeWidth": { "type": "number", "minimum": 0.5, "maximum": 1.5, "description": "Eye width multiplier (default 1.0)" },
                             "eyeOpen": { "type": "number", "minimum": 0.3, "maximum": 1.3, "description": "Eye openness multiplier (default 1.0); lower = narrower, almond / single-eyelid look" },
+                            "faceImage": { "type": "string", "description": "Optional face avatar as a data URL (data:image/png|jpeg|webp;base64,...), shown as a round soft-edged photo over the cat's face; eyes / nose / mouth / whiskers are hidden while set. Keep it small (~256x256)." },
+                            "faceImageScale": { "type": "number", "minimum": 0.6, "maximum": 1.4, "description": "Face avatar size multiplier (default 1.0)" },
                             "eyeLid": { "type": "number", "minimum": 0, "maximum": 1, "description": "Resting upper-eyelid droop (default 0); higher = sleepier / heavier lids" },
                             "squintColor": { "type": "string" },
                             "squintGlowColor": { "type": "string" },

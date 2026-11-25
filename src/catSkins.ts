@@ -48,6 +48,8 @@ export interface CatSkinConfig {
   eyeWidth?: number;
   eyeOpen?: number;
   eyeLid?: number;
+  faceImage?: string;
+  faceImageScale?: number;
   squintColor?: string;
   squintGlowColor?: string;
   noseColor?: string;
@@ -97,6 +99,8 @@ export interface ResolvedSkin {
   eyeWidth: number;
   eyeOpen: number;
   eyeLid: number;
+  faceImage: string | null;
+  faceImageScale: number;
   squintColor: string;
   squintGlowColor: string | null;
   noseColor: string | null;
@@ -144,6 +148,18 @@ export function resolveEyeShape(raw: Pick<CatSkinConfig, 'eyeWidth' | 'eyeOpen' 
   };
 }
 
+/** Face avatar overlay: only image data URLs are accepted (no remote URLs / file paths). */
+export function resolveFaceImage(raw: Pick<CatSkinConfig, 'faceImage' | 'faceImageScale'>): {
+  faceImage: string | null;
+  faceImageScale: number;
+} {
+  const src = typeof raw.faceImage === 'string' ? raw.faceImage.trim() : '';
+  return {
+    faceImage: /^data:image\/(png|jpe?g|webp);base64,/i.test(src) ? src : null,
+    faceImageScale: clampNum(raw.faceImageScale, 0.6, 1.4, 1),
+  };
+}
+
 export function resolveCustomSkin(raw: CatSkinConfig): ResolvedSkin {
   const fur = raw.furColor || '#f2a452';
   const darkBase = !isLightColor(fur);
@@ -187,6 +203,7 @@ export function resolveCustomSkin(raw: CatSkinConfig): ResolvedSkin {
     eyeCatchlight: raw.eyeCatchlight ?? !darkBase,
     eyeRimColor: raw.eyeRimColor || (darkBase ? null : 'rgba(42, 46, 58, 0.78)'),
     ...resolveEyeShape(raw),
+    ...resolveFaceImage(raw),
     squintColor: raw.squintColor || (darkBase ? raw.eyeColorTop || '#d4f044' : '#2c2928'),
     squintGlowColor: raw.squintGlowColor || null,
     noseColor: raw.noseColor !== undefined ? (raw.noseColor || null) : (darkBase ? null : '#ee8e9e'),

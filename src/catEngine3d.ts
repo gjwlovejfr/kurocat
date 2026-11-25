@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { CatSkinConfig } from './catSkins';
+import { resolveFaceImage, type CatSkinConfig } from './catSkins';
 import type { KeyboardLayoutId } from './keyboardLayout';
 import type { KeyboardOrientation, TailKeyMode } from './catEngine';
 import { DEFAULT_TAIL_KEY_IDS } from './catEngine';
@@ -303,6 +303,49 @@ function makeBlushTexture(): THREE.CanvasTexture {
   return tex;
 }
 
+// Face avatar overlay geometry (headMount local space)
+const FACE_AVATAR_CY = 0.035;
+const FACE_AVATAR_R = 0.34;
+
+/** Unlit round photo patch with a soft feathered rim, conforming to the face surface. */
+function createFaceAvatarMaterial(): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uTex: { value: null as THREE.Texture | null },
+      uFeather: { value: 0.16 },
+    },
+    transparent: true,
+    depthTest: true,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -3,
+    polygonOffsetUnits: -3,
+    side: THREE.FrontSide,
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform sampler2D uTex;
+      uniform float uFeather;
+      varying vec2 vUv;
+      void main() {
+        float r = length(vUv * 2.0 - 1.0);
+        float alpha = 1.0 - smoothstep(1.0 - uFeather, 1.0, r);
+        if (alpha < 0.01) discard;
+        vec4 tex = texture2D(uTex, vUv);
+        // Gentle rim shading so the flat photo sits on the rounded head
+        vec3 col = tex.rgb * mix(1.0, 0.86, smoothstep(0.55, 1.0, r));
+        gl_FragColor = vec4(col, alpha * tex.a);
+        #include <colorspace_fragment>
+      }
+    `,
+  });
+}
+
 /**
  * Analytical anti-aliased GLSL eye shader reproducing original KuroCat's signature eyes:
  * - Luminous lemon-chartreuse almond-oval with subtle cheeky outward tilt (±0.10 rad)
@@ -544,6 +587,11 @@ export class KuroCatEngine3D {
     blush: THREE.Mesh;
   }> = [];
   private readonly faceGroup = new THREE.Group();
+  private whiskerMesh: THREE.Mesh | null = null;
+  private readonly faceAvatarMat = createFaceAvatarMaterial();
+  private faceAvatar: THREE.Mesh | null = null;
+  private faceAvatarSrc: string | null = null;
+  private faceAvatarScale = 1;
 
   // Shared materials updated on skin switch
   private readonly pawMat: THREE.ShaderMaterial;
@@ -1019,6 +1067,7 @@ export class KuroCatEngine3D {
       const whiskerMesh = new THREE.Mesh(mergedWhiskers, this.whiskerMat);
       whiskerMesh.renderOrder = 12;
       this.headMount.add(whiskerMesh);
+      this.whiskerMesh = whiskerMesh;
     }
 
     // 8) Delicate 3D Nose & "ω" Mouth (shown on Ragdoll / Tabby / Calico / Tuxedo / Siamese; hidden on pure Black Cat!)
@@ -1046,6 +1095,9 @@ export class KuroCatEngine3D {
       this.faceGroup.add(noseMesh, mouth.mesh);
       this.headMount.add(this.faceGroup);
     }
+
+    // 8a) Optional face avatar photo patch (hidden until a skin sets faceImage)
+    this.rebuildFaceAvatar(1);
 
     // 8b) Sculpted 3D Gaming Headset (auto-equipped on PC game detection or manual toggle!)
     this.buildGamingHeadset();
@@ -1340,6 +1392,47 @@ export class KuroCatEngine3D {
     return R * Z_SCALE * Math.sqrt(Math.max(0, 1 - ux * ux));
   }
 
+  private rebuildFaceAvatar(scale: number): void {
+    const r = FACE_AVATAR_R * scale;
+    const geo = this.makeCurvedFacePatchGeo(0, FACE_AVATAR_CY, r, r, 0.034, 28);
+    if (this.faceAvatar) {
+      this.faceAvatar.geometry.dispose();
+      this.faceAvatar.geometry = geo;
+    } else {
+      this.faceAvatar = new THREE.Mesh(geo, this.faceAvatarMat);
+      this.faceAvatar.renderOrder = 14;
+      this.faceAvatar.visible = false;
+      this.headMount.add(this.faceAvatar);
+    }
+    this.faceAvatarScale = scale;
+  }
+
+  private applyFaceAvatar(skin: CatSkinConfig): void {
+    const { faceImage, faceImageScale } = resolveFaceImage(skin);
+    if (!this.faceAvatar) return;
+    if (!faceImage) {
+      this.faceAvatar.visible = false;
+      return;
+    }
+    if (faceImageScale !== this.faceAvatarScale) this.rebuildFaceAvatar(faceImageScale);
+    if (faceImage !== this.faceAvatarSrc) {
+      this.faceAvatarSrc = faceImage;
+      new THREE.TextureLoader().load(faceImage, (tex) => {
+        if (this.faceAvatarSrc !== faceImage) {
+          tex.dispose();
+          return;
+        }
+        tex.colorSpace = THREE.SRGBColorSpace;
+        const prev = this.faceAvatarMat.uniforms.uTex.value as THREE.Texture | null;
+        this.faceAvatarMat.uniforms.uTex.value = tex;
+        prev?.dispose();
+        if (this.faceAvatar) this.faceAvatar.visible = true;
+      });
+    } else {
+      this.faceAvatar.visible = this.faceAvatarMat.uniforms.uTex.value !== null;
+    }
+  }
+
   private makeCurvedFacePatchGeo(
     cx: number,
     cy: number,
@@ -1550,7 +1643,10 @@ export class KuroCatEngine3D {
     this.tuckLineMat.color.set(p.isDarkFur ? '#b2b8c4' : '#7b6e64');
     this.tuckLineMat.opacity = p.isDarkFur ? 0.36 : 0.24;
 
-    this.faceGroup.visible = Boolean(p.nose);
+    this.applyFaceAvatar(skin);
+    const hasAvatar = resolveFaceImage(skin).faceImage !== null;
+    this.faceGroup.visible = Boolean(p.nose) && !hasAvatar;
+    if (this.whiskerMesh) this.whiskerMesh.visible = !hasAvatar;
     if (p.nose) this.noseMat.color.set(p.nose);
     if (p.mouth) this.mouthMat.color.set(p.mouth);
 
@@ -2303,13 +2399,15 @@ export class KuroCatEngine3D {
     // Match original KuroCat 2D: Black Cat shows NO permanent catchlights when calm, sparkling catchlights when Curious!
     const shineAmt = pal?.eyeCatchlight ? 1.0 + curious * 0.20 : Math.min(1.16, curious * 1.25);
 
+    // Face avatar replaces the drawn eyes / blush / lids entirely
+    const avatarOn = this.faceAvatar?.visible === true;
     for (const e of this.eyes) {
-      e.blush.visible = showBlush;
-      e.mesh.visible = showOpenEye;
-      e.closedArc.visible = isSleepOrPrivacy || isBlinkClosed;
-      e.squintSlit.visible = isPetSquint;
+      e.blush.visible = showBlush && !avatarOn;
+      e.mesh.visible = showOpenEye && !avatarOn;
+      e.closedArc.visible = (isSleepOrPrivacy || isBlinkClosed) && !avatarOn;
+      e.squintSlit.visible = isPetSquint && !avatarOn;
 
-      if (showOpenEye) {
+      if (showOpenEye && !avatarOn) {
         const eyeW = pal?.eyeWidth ?? 1;
         const eyeO = pal?.eyeOpen ?? 1;
         const irisRx = 0.156 * eyeW * (1 + curious * 0.06);

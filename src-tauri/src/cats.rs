@@ -99,6 +99,12 @@ pub struct CatSkinConfig {
     /// Resting upper-eyelid droop (default 0.0, clamped 0..1)
     #[serde(default)]
     pub eye_lid: Option<f64>,
+    /// Optional face avatar image (data URL, e.g. "data:image/jpeg;base64,...") drawn over the face
+    #[serde(default)]
+    pub face_image: Option<String>,
+    /// Face avatar size multiplier (default 1.0, clamped 0.6..1.4)
+    #[serde(default)]
+    pub face_image_scale: Option<f64>,
     #[serde(default)]
     pub squint_color: Option<String>,
     #[serde(default)]
@@ -196,6 +202,8 @@ pub fn builtin_cats() -> Vec<CatSkinConfig> {
             eye_width: None,
             eye_open: None,
             eye_lid: None,
+            face_image: None,
+            face_image_scale: None,
             squint_color: Some("#d4f044".to_string()),
             squint_glow_color: None,
             nose_color: None,
@@ -242,6 +250,8 @@ pub fn builtin_cats() -> Vec<CatSkinConfig> {
             eye_width: None,
             eye_open: None,
             eye_lid: None,
+            face_image: None,
+            face_image_scale: None,
             squint_color: Some("#212533".to_string()),
             squint_glow_color: Some("rgba(174, 224, 255, 0.72)".to_string()),
             nose_color: Some("#ee8e9e".to_string()),
@@ -288,6 +298,8 @@ pub fn builtin_cats() -> Vec<CatSkinConfig> {
             eye_width: None,
             eye_open: None,
             eye_lid: None,
+            face_image: None,
+            face_image_scale: None,
             squint_color: Some("#523318".to_string()),
             squint_glow_color: None,
             nose_color: Some("#ee8d98".to_string()),
@@ -334,6 +346,8 @@ pub fn builtin_cats() -> Vec<CatSkinConfig> {
             eye_width: None,
             eye_open: None,
             eye_lid: None,
+            face_image: None,
+            face_image_scale: None,
             squint_color: Some("#383230".to_string()),
             squint_glow_color: None,
             nose_color: Some("#ef95a2".to_string()),
@@ -380,6 +394,8 @@ pub fn builtin_cats() -> Vec<CatSkinConfig> {
             eye_width: None,
             eye_open: None,
             eye_lid: None,
+            face_image: None,
+            face_image_scale: None,
             squint_color: Some("#c8f052".to_string()),
             squint_glow_color: None,
             nose_color: Some("#ee9aa6".to_string()),
@@ -426,6 +442,8 @@ pub fn builtin_cats() -> Vec<CatSkinConfig> {
             eye_width: None,
             eye_open: None,
             eye_lid: None,
+            face_image: None,
+            face_image_scale: None,
             squint_color: Some("#8ad4ff".to_string()),
             squint_glow_color: None,
             nose_color: Some("#3c2b22".to_string()),
@@ -472,6 +490,8 @@ pub fn builtin_cats() -> Vec<CatSkinConfig> {
             eye_width: None,
             eye_open: None,
             eye_lid: None,
+            face_image: None,
+            face_image_scale: None,
             squint_color: Some("#1e293b".to_string()),
             squint_glow_color: None,
             nose_color: None,

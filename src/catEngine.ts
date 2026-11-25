@@ -578,6 +578,42 @@ export class KuroCatEngine {
     }
   }
 
+  private faceImg: HTMLImageElement | null = null;
+  private faceImgSrc: string | null = null;
+
+  private syncFaceImage(): void {
+    const src = this.customSkin?.faceImage ?? null;
+    if (src === this.faceImgSrc) return;
+    this.faceImgSrc = src;
+    this.faceImg = null;
+    if (!src) return;
+    const img = new Image();
+    img.onload = () => {
+      if (this.faceImgSrc !== src) return;
+      this.faceImg = img;
+      this.wakeRendering();
+    };
+    img.src = src;
+  }
+
+  /** Round soft-edged face avatar photo centered on the custom cat's face. */
+  private drawFaceAvatar(ctx: CanvasRenderingContext2D, img: HTMLImageElement, cx: number, scale: number): void {
+    const r = 31 * scale;
+    const cy = 4;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(img, cx - r, cy - r, r * 2, r * 2);
+    // Soft rim shading so the photo blends into the head
+    const rim = ctx.createRadialGradient(cx, cy, r * 0.62, cx, cy, r);
+    rim.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    rim.addColorStop(1, 'rgba(0, 0, 0, 0.18)');
+    ctx.fillStyle = rim;
+    ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+    ctx.restore();
+  }
+
   public setCatAppearance(breedId: string, skin?: CatSkinConfig | null): void {
     if (breedId === 'dafeiyu') {
       this.catBreed = 'dafeiyu';
@@ -593,6 +629,7 @@ export class KuroCatEngine {
       this.catBreed = 'black';
       this.customSkin = null;
     }
+    this.syncFaceImage();
     this.syncLayoutPositions();
     this.wakeRendering();
   }
@@ -4750,60 +4787,65 @@ export class KuroCatEngine {
     ctx.shadowOffsetY = 0;
     const wShift = this.faceTurnX * 0.72;
 
-    // Blush on petting
-    if (s.blushColor && this.squintAmount > 0.12) {
-      ctx.save();
-      ctx.globalAlpha = 0.42 * this.squintAmount;
-      ctx.fillStyle = s.blushColor;
-      ctx.beginPath();
-      ctx.ellipse(wShift - 30, 13, 8.5, 4.6, -0.08, 0, Math.PI * 2);
-      ctx.ellipse(wShift + 30, 13, 8.5, 4.6, 0.08, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
+    const faceImg = s.faceImage ? this.faceImg : null;
+    if (faceImg) {
+      this.drawFaceAvatar(ctx, faceImg, wShift, s.faceImageScale);
+    } else {
+      // Blush on petting
+      if (s.blushColor && this.squintAmount > 0.12) {
+        ctx.save();
+        ctx.globalAlpha = 0.42 * this.squintAmount;
+        ctx.fillStyle = s.blushColor;
+        ctx.beginPath();
+        ctx.ellipse(wShift - 30, 13, 8.5, 4.6, -0.08, 0, Math.PI * 2);
+        ctx.ellipse(wShift + 30, 13, 8.5, 4.6, 0.08, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
 
-    // Nose & mouth
-    if (s.noseColor) {
-      ctx.fillStyle = s.noseColor;
-      ctx.beginPath();
-      ctx.moveTo(wShift - 4.1, 9.6);
-      ctx.quadraticCurveTo(wShift, 8.5, wShift + 4.1, 9.6);
-      ctx.quadraticCurveTo(wShift + 3.2, 13.8, wShift, 14.3);
-      ctx.quadraticCurveTo(wShift - 3.2, 13.8, wShift - 4.1, 9.6);
-      ctx.closePath();
-      ctx.fill();
-    }
-    if (s.mouthColor) {
-      ctx.strokeStyle = s.mouthColor;
-      ctx.lineWidth = 1.35;
+      // Nose & mouth
+      if (s.noseColor) {
+        ctx.fillStyle = s.noseColor;
+        ctx.beginPath();
+        ctx.moveTo(wShift - 4.1, 9.6);
+        ctx.quadraticCurveTo(wShift, 8.5, wShift + 4.1, 9.6);
+        ctx.quadraticCurveTo(wShift + 3.2, 13.8, wShift, 14.3);
+        ctx.quadraticCurveTo(wShift - 3.2, 13.8, wShift - 4.1, 9.6);
+        ctx.closePath();
+        ctx.fill();
+      }
+      if (s.mouthColor) {
+        ctx.strokeStyle = s.mouthColor;
+        ctx.lineWidth = 1.35;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(wShift - 5.8, 16.6);
+        ctx.quadraticCurveTo(wShift - 2.9, 19.6, wShift, 16.4);
+        ctx.quadraticCurveTo(wShift + 2.9, 19.6, wShift + 5.8, 16.6);
+        ctx.stroke();
+      }
+
+      // Whiskers
+      ctx.strokeStyle = s.whiskerColor;
+      ctx.lineWidth = 1.1;
       ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(wShift - 5.8, 16.6);
-      ctx.quadraticCurveTo(wShift - 2.9, 19.6, wShift, 16.4);
-      ctx.quadraticCurveTo(wShift + 2.9, 19.6, wShift + 5.8, 16.6);
-      ctx.stroke();
-    }
+      const leftLen = Math.max(8, 12 - this.faceTurnX * 0.55);
+      const rightLen = Math.max(8, 12 + this.faceTurnX * 0.55);
+      for (let i = 0; i < 3; i++) {
+        const wy = 16 + i * 5.0;
+        const slant = 2.0 + i * 1.1;
+        ctx.beginPath();
+        ctx.moveTo(-34 + wShift, wy);
+        ctx.lineTo(-34 + wShift - leftLen, wy + slant);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(34 + wShift, wy);
+        ctx.lineTo(34 + wShift + rightLen, wy + slant);
+        ctx.stroke();
+      }
 
-    // Whiskers
-    ctx.strokeStyle = s.whiskerColor;
-    ctx.lineWidth = 1.1;
-    ctx.lineCap = 'round';
-    const leftLen = Math.max(8, 12 - this.faceTurnX * 0.55);
-    const rightLen = Math.max(8, 12 + this.faceTurnX * 0.55);
-    for (let i = 0; i < 3; i++) {
-      const wy = 16 + i * 5.0;
-      const slant = 2.0 + i * 1.1;
-      ctx.beginPath();
-      ctx.moveTo(-34 + wShift, wy);
-      ctx.lineTo(-34 + wShift - leftLen, wy + slant);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(34 + wShift, wy);
-      ctx.lineTo(34 + wShift + rightLen, wy + slant);
-      ctx.stroke();
+      this.drawCustomEyes(ctx, s, wShift, -1);
     }
-
-    this.drawCustomEyes(ctx, s, wShift, -1);
     this.drawHeadphonesFront(ctx);
 
     ctx.restore();
