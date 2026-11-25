@@ -4821,8 +4821,10 @@ export class KuroCatEngine {
     const curious = Math.min(1, this.curiousAmount);
     const cross = this.crossAmount;
     const eyeXs = [cx - 23.0, cx + 23.0];
-    const rx = (14.8 + this.typingHunch * 1.0) * (1 + curious * 0.06);
-    const ry = (13.4 - this.typingHunch * 0.5) * (1 + curious * 0.09);
+    const rx = (14.8 + this.typingHunch * 1.0) * (1 + curious * 0.06) * s.eyeWidth;
+    const ry = (13.4 - this.typingHunch * 0.5) * (1 + curious * 0.09) * s.eyeOpen;
+    // Resting level upper lid (custom eyeLid), relaxed a bit when curious
+    const restLid = s.eyeLid * (1 - curious * 0.5);
 
     for (let idx = 0; idx < 2; idx++) {
       ctx.save();
@@ -4865,9 +4867,10 @@ export class KuroCatEngine {
       const curiousTilt = (idx === 0 ? -0.1 : 0.1) * (0.25 + this.typingHunch * 0.75);
       ctx.rotate(curiousTilt);
 
-      const hasGrumpyLid = cross > 0.04;
-      const innerDrop = -openRy + openRy * 0.90 * cross;
-      const outerDrop = -openRy + openRy * 0.56 * cross;
+      const hasGrumpyLid = cross > 0.04 || restLid > 0.02;
+      const flatDrop = -openRy + openRy * 0.90 * restLid;
+      const innerDrop = Math.max(flatDrop, -openRy + openRy * 0.90 * cross);
+      const outerDrop = Math.max(flatDrop, -openRy + openRy * 0.56 * cross);
       const leftDrop = idx === 0 ? outerDrop : innerDrop;
       const rightDrop = idx === 0 ? innerDrop : outerDrop;
 

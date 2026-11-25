@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { CatSkinConfig, CatSpot } from './catSkins';
+import { resolveEyeShape, type CatSkinConfig, type CatSpot } from './catSkins';
 
 const MAX_CUSTOM_SPOTS = 8;
 
@@ -68,6 +68,9 @@ export interface FurPalette3D {
   lid: string;
   squintLine: string;
   eyeCatchlight: boolean;
+  eyeWidth?: number;
+  eyeOpen?: number;
+  eyeLid?: number;
   isDarkFur: boolean;
   lightContour: string | null;
   accent: string;
@@ -361,6 +364,7 @@ export function resolveFurPalette3D(skin: CatSkinConfig, style: RenderStyle3D): 
         lid: skin.squintColor || '#282c36',
         squintLine: skin.squintColor || '#282c36',
         eyeCatchlight: skin.eyeCatchlight !== false,
+        ...resolveEyeShape(skin),
         isDarkFur: isDark,
         lightContour: isDark ? null : skin.outlineColor || '#6b5e54',
         accent,

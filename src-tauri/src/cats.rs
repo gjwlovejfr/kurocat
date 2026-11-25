@@ -90,6 +90,15 @@ pub struct CatSkinConfig {
     pub eye_catchlight: Option<bool>,
     #[serde(default)]
     pub eye_rim_color: Option<String>,
+    /// Eye width multiplier (default 1.0, clamped 0.5..1.5)
+    #[serde(default)]
+    pub eye_width: Option<f64>,
+    /// Eye openness multiplier (default 1.0, clamped 0.3..1.3); lower = narrower eyes
+    #[serde(default)]
+    pub eye_open: Option<f64>,
+    /// Resting upper-eyelid droop (default 0.0, clamped 0..1)
+    #[serde(default)]
+    pub eye_lid: Option<f64>,
     #[serde(default)]
     pub squint_color: Option<String>,
     #[serde(default)]
@@ -184,6 +193,9 @@ pub fn builtin_cats() -> Vec<CatSkinConfig> {
             pupil_color: Some("#0e0e10".to_string()),
             eye_catchlight: Some(false),
             eye_rim_color: None,
+            eye_width: None,
+            eye_open: None,
+            eye_lid: None,
             squint_color: Some("#d4f044".to_string()),
             squint_glow_color: None,
             nose_color: None,
@@ -227,6 +239,9 @@ pub fn builtin_cats() -> Vec<CatSkinConfig> {
             pupil_color: Some("#101624".to_string()),
             eye_catchlight: Some(true),
             eye_rim_color: Some("rgba(34, 39, 54, 0.85)".to_string()),
+            eye_width: None,
+            eye_open: None,
+            eye_lid: None,
             squint_color: Some("#212533".to_string()),
             squint_glow_color: Some("rgba(174, 224, 255, 0.72)".to_string()),
             nose_color: Some("#ee8e9e".to_string()),
@@ -270,6 +285,9 @@ pub fn builtin_cats() -> Vec<CatSkinConfig> {
             pupil_color: Some("#141210".to_string()),
             eye_catchlight: Some(true),
             eye_rim_color: Some("rgba(82, 52, 24, 0.78)".to_string()),
+            eye_width: None,
+            eye_open: None,
+            eye_lid: None,
             squint_color: Some("#523318".to_string()),
             squint_glow_color: None,
             nose_color: Some("#ee8d98".to_string()),
@@ -313,6 +331,9 @@ pub fn builtin_cats() -> Vec<CatSkinConfig> {
             pupil_color: Some("#101412".to_string()),
             eye_catchlight: Some(true),
             eye_rim_color: Some("rgba(46, 44, 42, 0.80)".to_string()),
+            eye_width: None,
+            eye_open: None,
+            eye_lid: None,
             squint_color: Some("#383230".to_string()),
             squint_glow_color: None,
             nose_color: Some("#ef95a2".to_string()),
@@ -356,6 +377,9 @@ pub fn builtin_cats() -> Vec<CatSkinConfig> {
             pupil_color: Some("#0e1012".to_string()),
             eye_catchlight: Some(true),
             eye_rim_color: None,
+            eye_width: None,
+            eye_open: None,
+            eye_lid: None,
             squint_color: Some("#c8f052".to_string()),
             squint_glow_color: None,
             nose_color: Some("#ee9aa6".to_string()),
@@ -399,6 +423,9 @@ pub fn builtin_cats() -> Vec<CatSkinConfig> {
             pupil_color: Some("#0e1320".to_string()),
             eye_catchlight: Some(true),
             eye_rim_color: Some("rgba(28, 22, 18, 0.80)".to_string()),
+            eye_width: None,
+            eye_open: None,
+            eye_lid: None,
             squint_color: Some("#8ad4ff".to_string()),
             squint_glow_color: None,
             nose_color: Some("#3c2b22".to_string()),
@@ -442,6 +469,9 @@ pub fn builtin_cats() -> Vec<CatSkinConfig> {
             pupil_color: Some("#101b36".to_string()),
             eye_catchlight: Some(true),
             eye_rim_color: None,
+            eye_width: None,
+            eye_open: None,
+            eye_lid: None,
             squint_color: Some("#1e293b".to_string()),
             squint_glow_color: None,
             nose_color: None,

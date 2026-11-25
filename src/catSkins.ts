@@ -45,6 +45,9 @@ export interface CatSkinConfig {
   pupilColor?: string;
   eyeCatchlight?: boolean;
   eyeRimColor?: string;
+  eyeWidth?: number;
+  eyeOpen?: number;
+  eyeLid?: number;
   squintColor?: string;
   squintGlowColor?: string;
   noseColor?: string;
@@ -91,6 +94,9 @@ export interface ResolvedSkin {
   pupilColor: string;
   eyeCatchlight: boolean;
   eyeRimColor: string | null;
+  eyeWidth: number;
+  eyeOpen: number;
+  eyeLid: number;
   squintColor: string;
   squintGlowColor: string | null;
   noseColor: string | null;
@@ -119,6 +125,23 @@ function parseHexLuminance(hex: string): number {
 
 export function isLightColor(hex: string): boolean {
   return parseHexLuminance(hex) > 0.48;
+}
+
+function clampNum(v: unknown, min: number, max: number, fallback: number): number {
+  return typeof v === 'number' && Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : fallback;
+}
+
+/** Eye shape multipliers shared by the 2D and 3D renderers (defaults keep the original look). */
+export function resolveEyeShape(raw: Pick<CatSkinConfig, 'eyeWidth' | 'eyeOpen' | 'eyeLid'>): {
+  eyeWidth: number;
+  eyeOpen: number;
+  eyeLid: number;
+} {
+  return {
+    eyeWidth: clampNum(raw.eyeWidth, 0.5, 1.5, 1),
+    eyeOpen: clampNum(raw.eyeOpen, 0.3, 1.3, 1),
+    eyeLid: clampNum(raw.eyeLid, 0, 1, 0),
+  };
 }
 
 export function resolveCustomSkin(raw: CatSkinConfig): ResolvedSkin {
@@ -163,6 +186,7 @@ export function resolveCustomSkin(raw: CatSkinConfig): ResolvedSkin {
     pupilColor: raw.pupilColor || '#10141e',
     eyeCatchlight: raw.eyeCatchlight ?? !darkBase,
     eyeRimColor: raw.eyeRimColor || (darkBase ? null : 'rgba(42, 46, 58, 0.78)'),
+    ...resolveEyeShape(raw),
     squintColor: raw.squintColor || (darkBase ? raw.eyeColorTop || '#d4f044' : '#2c2928'),
     squintGlowColor: raw.squintGlowColor || null,
     noseColor: raw.noseColor !== undefined ? (raw.noseColor || null) : (darkBase ? null : '#ee8e9e'),

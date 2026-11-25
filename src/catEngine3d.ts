@@ -31,8 +31,9 @@ const COLLAR_COLORS: Record<Exclude<CollarColorId, 'none'>, string> = {
   green: '#4fa368',
 };
 
-const EYE_MAX_RX = 0.175;
-const EYE_MAX_RY = 0.160;
+// Sized to fit custom eyeWidth (<=1.5x) / eyeOpen (<=1.3x) skins without clipping
+const EYE_MAX_RX = 0.24;
+const EYE_MAX_RY = 0.21;
 const Z_SCALE = 0.82;
 const BODY_H = 1.98;
 const HEAD_CY = 1.56;
@@ -322,6 +323,7 @@ function createEyeShaderMaterial(side: -1 | 1): THREE.ShaderMaterial {
       uPupilCenter: { value: new THREE.Vector2(0, 0) },
       uPupilRad: { value: new THREE.Vector2(0.43, 0.67) },
       uCross: { value: 0 },
+      uLid: { value: 0 },
       uCurious: { value: 0 },
       uShineAmt: { value: 0 },
       uIs3D: { value: 1 },
@@ -352,6 +354,7 @@ function createEyeShaderMaterial(side: -1 | 1): THREE.ShaderMaterial {
       uniform vec2 uPupilCenter;
       uniform vec2 uPupilRad;
       uniform float uCross;
+      uniform float uLid;
       uniform float uCurious;
       uniform float uShineAmt;
       uniform float uIs3D;
@@ -374,14 +377,16 @@ function createEyeShaderMaterial(side: -1 | 1): THREE.ShaderMaterial {
         float lidAlpha = 1.0;
         float lashMask = 0.0;
         float lidShadow = 0.0;
-        if (uCross > 0.01) {
-          float lidY = mix(1.18, 0.22, uCross) + uSide * p.x * 0.34 * uCross;
-          float lashH = 0.105 * smoothstep(0.05, 0.35, uCross);
+        float lidAmt = max(uCross, uLid);
+        if (lidAmt > 0.01) {
+          // Resting lid (uLid) stays level; only the grumpy cross mood adds the angled slant
+          float lidY = mix(1.18, 0.22, lidAmt) + uSide * p.x * 0.34 * uCross;
+          float lashH = 0.105 * smoothstep(0.05, 0.35, lidAmt);
           float lidDist = p.y - lidY;
           if (lidDist > lashH + aa) discard;
           lidAlpha = 1.0 - smoothstep(lashH - aa, lashH + aa, lidDist);
           lashMask = smoothstep(-aa, aa, lidDist);
-          lidShadow = smoothstep(-0.24, 0.0, lidDist) * 0.25 * uCross;
+          lidShadow = smoothstep(-0.24, 0.0, lidDist) * 0.25 * lidAmt;
         }
 
         // Luminous glass-cabochon iris gradient
@@ -2305,8 +2310,10 @@ export class KuroCatEngine3D {
       e.squintSlit.visible = isPetSquint;
 
       if (showOpenEye) {
-        const irisRx = 0.156 * (1 + curious * 0.06);
-        const irisRy = Math.max(0.02, 0.136 * (1 + curious * 0.09) * (1 - blinkClose * 0.8));
+        const eyeW = pal?.eyeWidth ?? 1;
+        const eyeO = pal?.eyeOpen ?? 1;
+        const irisRx = 0.156 * eyeW * (1 + curious * 0.06);
+        const irisRy = Math.max(0.02, 0.136 * eyeO * (1 + curious * 0.09) * (1 - blinkClose * 0.8));
 
         const pRx = clamp(
           (0.064 + curious * 0.048 + this.excite * 0.008) * (1 - cross * 0.32),
@@ -2325,6 +2332,7 @@ export class KuroCatEngine3D {
         (e.mat.uniforms.uPupilCenter.value as THREE.Vector2).set(px / irisRx, py / irisRy);
         (e.mat.uniforms.uPupilRad.value as THREE.Vector2).set(pRx / irisRx, pRy / irisRy);
         e.mat.uniforms.uCross.value = cross;
+        e.mat.uniforms.uLid.value = (pal?.eyeLid ?? 0) * (1 - curious * 0.5);
         e.mat.uniforms.uCurious.value = curious;
         e.mat.uniforms.uShineAmt.value = shineAmt;
       }
